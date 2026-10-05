@@ -243,6 +243,14 @@ class TestBuild(Base):
         _, _, warnings = self.build()
         self.assertTrue(any("already contains" in w for w in warnings))
 
+    def test_no_warning_for_signature_constant_in_emulator(self):
+        # some PocketNES builds have "NES\x1a" in a literal pool
+        with open(os.path.join(self.dir, "pocketnes.gba"), "wb") as f:
+            f.write(make_emu()[:100] + b"\0" * 48 + b"NES\x1a\x4e\x45\x53" + make_emu()[100:])
+        self.write("a.nes", make_nes())
+        _, _, warnings = self.build()
+        self.assertEqual(warnings, [])
+
     def test_no_pocketnes(self):
         os.remove(os.path.join(self.dir, "pocketnes.gba"))
         self.write("a.nes", make_nes())

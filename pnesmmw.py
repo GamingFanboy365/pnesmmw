@@ -623,10 +623,8 @@ class Project(object):
             raise BuildError("PocketNES rom not found: " + pocketnes)
         with open(pocketnes, "rb") as f:
             emu = f.read()
-        # PocketNES never contains the iNES signature itself (it builds it at
-        # run time), so finding one means a menu rom was picked by mistake
-        pos = emu.find(INES_MAGIC)
-        if pos >= 0:
+        pos = find_embedded_rom(emu)
+        if pos is not None:
             warnings.append("%s already contains a NES rom at 0x%x; did you "
                             "select a menu rom instead of pocketnes.gba?"
                             % (os.path.basename(pocketnes), pos))
@@ -668,6 +666,24 @@ class Project(object):
         if progress:
             progress(len(menu), len(menu), "Done")
         return romfile, size, warnings
+
+
+def find_embedded_rom(data):
+    """Offset of the first menu entry in data, or None.
+
+    Some PocketNES builds contain the bytes "NES\x1a" as a constant, so a
+    match only counts when it has a plausible 48 byte rom header in front.
+    """
+    for m in re.finditer(re.escape(INES_MAGIC), data):
+        p = m.start()
+        h = data[p:p + 16]
+        if p < ROMHEADER_SIZE or len(h) < 16 or not h[4]:
+            continue
+        size, = struct.unpack_from("<I", data, p - 16)
+        expected = 16 + (512 if h[6] & 4 else 0) + h[4] * 16384 + h[5] * 8192
+        if expected <= size <= len(data) - p:
+            return p - ROMHEADER_SIZE
+    return None
 
 
 class BuildError(Exception):
