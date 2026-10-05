@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+PocketNESMenu.gba
+pnesmmw.cdb
+*.nes
+*.zip
+pnesmmw.ini
