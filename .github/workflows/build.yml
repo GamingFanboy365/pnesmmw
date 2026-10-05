@@ -1,0 +1,81 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller
+      - run: python -m unittest discover -s tests
+      - name: Build exe
+        run: |
+          pyinstaller --onefile --windowed --name pnesmmw pnesmmw.py
+          pyinstaller --onefile --console --name pnesmmw-cli pnesmmw.py
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory pnesmmw-windows
+          Copy-Item dist/pnesmmw.exe, dist/pnesmmw-cli.exe, pnesmmw.ini, pnesmmw.mdb, README.md pnesmmw-windows/
+          dist/pnesmmw-cli.exe --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnesmmw-windows
+          path: pnesmmw-windows/
+
+  linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package
+        run: |
+          mkdir pnesmmw-linux
+          cp pnesmmw.py pnesmmw.ini pnesmmw.mdb README.md pnesmmw-linux/
+          chmod +x pnesmmw-linux/pnesmmw.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnesmmw-linux
+          path: pnesmmw-linux/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Zip
+        run: |
+          (cd pnesmmw-windows && zip -r ../pnesmmw-windows.zip .)
+          chmod +x pnesmmw-linux/pnesmmw.py
+          tar czf pnesmmw-linux.tar.gz pnesmmw-linux
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pnesmmw-windows.zip
+            pnesmmw-linux.tar.gz
