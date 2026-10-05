@@ -20,7 +20,7 @@ Codes in the rom list:
 
 | Code | Meaning |
 |---|---|
-| `[inc]` | Incompatible: the mapper is not in the supported list in `pnesmmw.ini` |
+| `[inc]` | Incompatible: the mapper is not supported by current PocketNES (the list can be changed with `mappers=` in `pnesmmw.ini`) |
 | `[ovr]` | Overdump: the file is bigger than its header says (trimmed automatically) |
 | `[bad]` | Bad dump: the file is truncated, or the database marks it `[b]` |
 | `[ex]` | Excluded from the menu |
@@ -32,7 +32,7 @@ The same engine runs without a GUI, which is handy for scripts or headless machi
 
 ```
 pnesmmw.py list                         show roms, menu names, flags and total size
-pnesmmw.py build                        build the menu rom using pnesmmw.ini
+pnesmmw.py build                        build the menu rom with the saved settings
 pnesmmw.py build -r ~/roms/nes -o menu.gba --set number=1 --set padsize=1
 pnesmmw.py build -s splash.bmp --set usesplash=1 --save
 pnesmmw.py --ini set2.ini build         use a different settings file (and set2.cdb)
@@ -42,7 +42,7 @@ pnesmmw.py --ini set2.ini build         use a different settings file (and set2.
 
 ## Options
 
-All options live in `pnesmmw.ini` and can be changed in the Options window.
+Options and paths are kept in `pnesmmw.ini` next to the program. The file isn't shipped: the defaults below are used until you change something in the Options window (or use `--save`), which creates it. An ini from the 1.2a program also works.
 
 | ini key | Option | Default |
 |---|---|---|

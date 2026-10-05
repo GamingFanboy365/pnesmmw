@@ -52,6 +52,28 @@ def parse_menu(data, splash=False):
     return roms
 
 
+OLD_INI = """# PocketNES Menu Maker ini
+# lines starting with # are comments ignored by program
+
+# 1 to use numbering of the menu
+number=1
+
+# 1 to use names in database for menu
+lookupname=1
+
+# path to roms
+rompath=Z:\\nonexistent\\pnesmmw12a\\
+# filenames to use
+pocketnes=Z:\\nonexistent\\pnesmmw12a\\pocketnes.gba
+romfile=Z:\\nonexistent\\pnesmmw12a\\PocketNESMenu.gba
+varsfile=Z:\\nonexistent\\pnesmmw12a\\pnesmmw.mdb
+splashfile=Z:\\nonexistent\\pnesmmw12a\\splash.raw
+
+# Mappers to support
+mappers=0|1|2|3|4|7|9|11|15|16|17|18|19|21|22|23|24|25|26|32|33|34|65|66|67|68|69|70|71|72|73|75|76|78|79|80|86|87|92|93|94|97|99|105|151|152|180|228|232|
+"""
+
+
 def make_emu():
     # fake emulator binary, 4 byte aligned
     return b"\x2e\0\0\xea" + b"\0" * 200 + b"PNESEMU-END" + b"\0"
@@ -262,15 +284,14 @@ class TestBuild(Base):
 
 class TestSettings(Base):
     def test_old_ini_with_wine_paths(self):
-        with open(os.path.join(REPO, "original", "pnesmmw.ini")) as f:
-            text = f.read()
-        with open(self.ini, "w") as f:
-            f.write(text.replace("number=0", "number=1"))
+        # an ini written by pnesmmw 1.2a running under Wine
+        with open(self.ini, "w", newline="\r\n") as f:
+            f.write(OLD_INI)
         s = pnesmmw.Settings(self.ini)
         s.base = self.dir
         self.assertEqual(s.opts["number"], 1)
         self.assertIn(105, s.mappers)
-        # Z:\home\mic\... doesn't exist here, so defaults in the program dir are used
+        # the Z:\ paths don't exist here, so defaults in the program dir are used
         self.assertEqual(s.resolve("pocketnes"), os.path.join(self.dir, "pocketnes.gba"))
         self.assertEqual(s.resolve("rompath"), os.path.normpath(self.dir))
 
