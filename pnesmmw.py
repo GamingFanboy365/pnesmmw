@@ -43,13 +43,14 @@ FLAG_DENDY = 16      # Dendy timing (newer PocketNES). Old databases used
 FLAG_FOLLOWMEM = 32  # follow memory address instead of sprite number
 LEGACY_SPRITE_FLAG = 16
 
-# Mappers supported by current PocketNES (Dwedit's builds, cart.s mappertbl)
+# Mappers supported by GamingFanboy365's PocketNES fork (cart.s mappertbl):
+# Dwedit's current list plus 28, 38, 41, 89, 113, 146, 185 and 225, minus 218
 MAPPERS_CURRENT = [
     0, 1, 2, 3, 4, 5, 7, 9, 10, 11, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25,
-    26, 30, 32, 33, 34, 40, 42, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
-    75, 76, 77, 78, 79, 80, 85, 86, 87, 88, 92, 93, 94, 97, 99, 105, 118, 119,
-    140, 151, 152, 158, 163, 178, 180, 184, 187, 206, 218, 228, 232, 245, 249,
-    252, 254,
+    26, 28, 30, 32, 33, 34, 38, 40, 41, 42, 64, 65, 66, 67, 68, 69, 70, 71,
+    72, 73, 74, 75, 76, 77, 78, 79, 80, 85, 86, 87, 88, 89, 92, 93, 94, 97,
+    99, 105, 113, 118, 119, 140, 146, 151, 152, 158, 163, 178, 180, 184, 185,
+    187, 206, 225, 228, 232, 245, 249, 252, 254,
 ]
 # Mappers supported by PocketNES v9 (the list shipped with pnesmmw 1.2a)
 MAPPERS_V9 = [
@@ -165,7 +166,7 @@ class Settings(object):
         out += ["", "# Mappers to support (only used for the compatibility check)",
                 "# mappers for PocketNES v9 (flubba)",
                 "#mappers=" + "|".join(str(m) for m in MAPPERS_V9) + "|",
-                "# mappers for current PocketNES (Dwedit)",
+                "# mappers for the GamingFanboy365 PocketNES fork",
                 "mappers=" + "|".join(str(m) for m in self.mappers) + "|", ""]
         with open(self.ini_path, "w", encoding="latin-1", newline="\r\n") as f:
             f.write("\n".join(out))

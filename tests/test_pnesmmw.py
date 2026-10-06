@@ -295,6 +295,11 @@ class TestSettings(Base):
         self.assertEqual(s.resolve("pocketnes"), os.path.join(self.dir, "pocketnes.gba"))
         self.assertEqual(s.resolve("rompath"), os.path.normpath(self.dir))
 
+    def test_default_mappers_match_fork(self):
+        s = pnesmmw.Settings(self.ini)
+        for m in (28, 38, 41, 89, 113, 146, 185, 225):
+            self.assertIn(m, s.mappers)
+
     def test_save_roundtrip(self):
         s = self.settings(number=1, padsize=1)
         s.mappers = [0, 1, 2]
