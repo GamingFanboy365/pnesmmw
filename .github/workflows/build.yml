@@ -3,9 +3,14 @@ name: Build
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
+    tags: ["*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a release with this new tag (e.g. v2.0.3). Leave empty to only build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -91,7 +96,7 @@ jobs:
           path: pnesmmw-linux/
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
     needs: [windows, linux]
     runs-on: ubuntu-latest
     steps:
@@ -104,6 +109,10 @@ jobs:
           tar czf pnesmmw-linux.tar.gz pnesmmw-linux
       - uses: softprops/action-gh-release@v2
         with:
+          # a manual run creates the tag on the commit it built
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          name: ${{ inputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             pnesmmw-windows.zip
             pnesmmw-windows-32bit.zip
