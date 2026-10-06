@@ -92,7 +92,7 @@ All values are little endian. The entries come straight after `pocketnes.gba`, o
 python3 -m unittest discover -s tests
 ```
 
-The tests build menu roms from synthetic roms and read them back the way PocketNES does. GitHub Actions runs them on every push and then builds the Windows and Linux packages. Pushing a `v*` tag publishes a release.
+The tests build menu roms from synthetic roms and read them back the way PocketNES does. GitHub Actions runs them on every push and then builds the Windows and Linux packages. Publishing a GitHub release with a new tag, or pushing a tag, attaches the Windows and Linux downloads to it. A release can also be made from the Actions tab: run the Build workflow by hand and fill in a new tag name.
 
 ## Credits
 
