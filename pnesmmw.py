@@ -21,6 +21,7 @@ import os
 import re
 import struct
 import sys
+import unicodedata
 import zipfile
 
 VERSION = "2.0"
@@ -29,6 +30,7 @@ TITLE = "PocketNES Menu Maker v" + VERSION
 INES_MAGIC = b"NES\x1a"
 ROMHEADER_SIZE = 48          # name[32], filesize, flags, spritefollow, reserved
 NAME_SIZE = 32               # includes the terminating NUL
+MENU_WIDTH = 29              # characters PocketNES draws per menu line
 SPLASH_SIZE = 240 * 160 * 2  # raw 15-bit BGR, 240x160
 SMALL_ROM_LIMIT = 192 * 1024
 GBA_MAX_SIZE = 32 * 1024 * 1024
@@ -301,9 +303,26 @@ def save_custom_db(path, db):
 def clean_name(name):
     """'Legend of Zelda, The (PRG 0) (U) [!]' -> 'Legend of Zelda'"""
     name = re.sub(r"\([^)]*\)|\[[^\]]*\]", "", name)
+    name = name.replace("_", " ")
     name = re.sub(r"\s+", " ", name).strip()
     name = re.sub(r",\s*The$", "", name).strip()
     return name
+
+
+ASCII_FIXES = {
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+    "\u2013": "-", "\u2014": "-", "\u2026": "...", "\u00d7": "x",
+    "\u00df": "ss", "\u00e6": "ae", "\u00c6": "AE", "\u00f8": "o",
+    "\u00d8": "O", "\u0153": "oe", "\u0152": "OE",
+}
+
+
+def to_ascii(name):
+    """PocketNES's font only has ASCII 32-127: 'Pokémon' -> 'Pokemon'."""
+    name = "".join(ASCII_FIXES.get(c, c) for c in name)
+    name = unicodedata.normalize("NFKD", name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
+    return "".join(c if " " <= c <= "~" else "?" for c in name)
 
 
 def country_of(name):
@@ -434,12 +453,13 @@ class MenuEntry(object):
         return flags, follow
 
     def menu_name(self, number):
-        name = self.base_name()
+        """Name as drawn on the GBA, cut to the width of the menu."""
+        name = to_ascii(self.base_name())
         if self.settings.opts["number"]:
             name = "%d. %s" % (number, name)
         if self.settings.opts["showsmall"] and self.rom.output_size(self.settings) < SMALL_ROM_LIMIT:
-            name = name[:NAME_SIZE - 3] + " *"
-        return name[:NAME_SIZE - 1]
+            return name[:MENU_WIDTH - 2].rstrip() + " *"
+        return name[:MENU_WIDTH].rstrip()
 
     def codes(self):
         rom, codes = self.rom, []
@@ -648,7 +668,7 @@ class Project(object):
                                 % (entry.rom.display, entry.rom.mapper))
             data = entry.rom.output_data(s)
             flags, follow = entry.vars()
-            out.write(name.encode("latin-1", "replace")[:NAME_SIZE - 1]
+            out.write(name.encode("ascii", "replace")[:NAME_SIZE - 1]
                       .ljust(NAME_SIZE, b"\0"))
             out.write(struct.pack("<IIII", len(data), flags, follow, 0))
             out.write(data)
@@ -775,6 +795,11 @@ def main(argv=None):
         p.add_argument("--save", action="store_true",
                        help="save the paths/options given here to the ini file")
     args = parser.parse_args(argv)
+    # file names can contain characters the console (or a redirected file)
+    # can't encode; print a '?' instead of crashing
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None and hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
 
     settings = Settings(os.path.abspath(args.ini) if args.ini else None)
 
@@ -892,7 +917,10 @@ def run_gui(settings):
         def clear(self):
             if messagebox.askyesno("Warning!", "Delete all custom settings?\n\n"
                                    "This is permanent and can not be reversed.", parent=self):
-                self.app.project.clear_custom()
+                try:
+                    self.app.project.clear_custom()
+                except OSError as e:
+                    self.app.save_failed(self.app.settings.cdb_path, e)
                 self.app.update_lists()
 
         def ok(self):
@@ -905,7 +933,7 @@ def run_gui(settings):
             try:
                 s.save()
             except OSError as e:
-                messagebox.showerror("Error!", "Unable to save INI file:\n%s" % e, parent=self)
+                self.app.save_failed(s.ini_path, e)
             self.destroy()
             self.app.refresh()
 
@@ -1208,8 +1236,11 @@ def run_gui(settings):
                 return
             if name == entry.base_name() and not (entry.rom.custom and entry.rom.custom.name):
                 name = ""
-            self.project.set_custom(entry, name, flags, follow,
-                                    bool(self.flagvars["exclude"].get()))
+            try:
+                self.project.set_custom(entry, name, flags, follow,
+                                        bool(self.flagvars["exclude"].get()))
+            except OSError as e:
+                self.save_failed(self.settings.cdb_path, e)
             self.update_lists()
             self.show_info(entry)
 
@@ -1219,9 +1250,20 @@ def run_gui(settings):
                 return
             if not self.confirm("Do you want to delete custom settings for this rom?"):
                 return
-            self.project.clear_custom(entry)
+            try:
+                self.project.clear_custom(entry)
+            except OSError as e:
+                self.save_failed(self.settings.cdb_path, e)
             self.update_lists()
             self.show_info(entry)
+
+        def save_failed(self, path, error):
+            """The change still applies until the program is closed."""
+            messagebox.showerror(
+                "Error!", "Unable to save %s:\n%s\n\nThe change is used until you "
+                "close the program. To keep changes, move the program to a folder "
+                "you can write to (not Program Files)." % (path, error),
+                parent=self.root)
 
         def move(self, delta):
             entry = self.current()
@@ -1241,8 +1283,8 @@ def run_gui(settings):
                 self.settings.set_path("rompath", path)
                 try:
                     self.settings.save()
-                except OSError:
-                    pass
+                except OSError as e:
+                    self.save_failed(self.settings.ini_path, e)
                 self.refresh()
 
         def make_rom(self):

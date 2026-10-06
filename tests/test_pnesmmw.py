@@ -144,7 +144,7 @@ class TestBuild(Base):
         self.assertEqual(follow, 12)
 
         _, data, _ = self.build(cleanlist=0)
-        self.assertEqual(parse_menu(data)[0][0], "Legend of Zelda, The (PRG 0) (U")  # 31 chars max
+        self.assertEqual(parse_menu(data)[0][0], "Legend of Zelda, The (PRG 0)")  # 29 chars max
         _, data, _ = self.build(lookupname=0)
         self.assertEqual(parse_menu(data)[0][0], "zelda")
         _, data, _ = self.build(usevars=0)
@@ -163,9 +163,15 @@ class TestBuild(Base):
         self.write("Big.nes", make_nes(prg_banks=16, chr_banks=16, fill=2))
         _, data, _ = self.build(number=1, showsmall=1)
         names = [r[0] for r in parse_menu(data)]
-        self.assertEqual(names[0], "1. A Very Long Name That Does *")
+        # PocketNES draws 29 characters, so the marker must fit in those
+        self.assertEqual(names[0], "1. A Very Long Name That Do *")
         self.assertEqual(names[1], "2. Big")
-        self.assertTrue(all(len(n) <= 31 for n in names))
+        self.assertTrue(all(len(n) <= 29 for n in names))
+
+    def test_accented_file_names(self):
+        self.write("Pok\u00e9mon Caf\u00e9.nes", make_nes(fill=3))
+        _, data, _ = self.build(lookupname=0)
+        self.assertEqual(parse_menu(data)[0][0], "Pokemon Cafe")
 
     def test_zip_and_bad_files(self):
         rom = make_nes(fill=0x55)
@@ -322,10 +328,16 @@ class TestRealDatabase(unittest.TestCase):
         e = db[0xd3bff72e]  # value followed by a comment containing '|'
         self.assertEqual((e.flags, e.follow), (16, 12))
 
+    def test_menu_names_are_ascii(self):
+        self.assertEqual(pnesmmw.to_ascii("Pok\u00e9mon Caf\u00e9"), "Pokemon Cafe")
+        self.assertEqual(pnesmmw.to_ascii("Mickey\u2019s \u2013 Zoo"), "Mickey's - Zoo")
+        self.assertEqual(pnesmmw.to_ascii("\u65e5\u672c"), "??")
+
     def test_clean_names(self):
         self.assertEqual(pnesmmw.clean_name("Legend of Zelda, The (PRG 0) (U)"), "Legend of Zelda")
         self.assertEqual(pnesmmw.clean_name("Super Mario Bros. (W) [!]"), "Super Mario Bros.")
         self.assertEqual(pnesmmw.clean_name("1942 (JU) [o1]"), "1942")
+        self.assertEqual(pnesmmw.clean_name("Tetris_USA_(Rev_A)"), "Tetris USA")
 
 
 if __name__ == "__main__":
