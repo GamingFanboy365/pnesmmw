@@ -26,27 +26,54 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          # 64-bit: current Python, Windows 8.1 or newer
+          - name: pnesmmw-windows
+            python: "3.12"
+            arch: x64
+            machine: "0x8664"
+            pyinstaller: pyinstaller
+          # 32-bit: Python 3.8 is the last release that runs on Windows 7,
+          # and PyInstaller 5.x still supports it
+          - name: pnesmmw-windows-32bit
+            python: "3.8"
+            arch: x86
+            machine: "0x14c"
+            pyinstaller: pyinstaller==5.13.2
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: pip install pyinstaller
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.arch }}
+      - run: pip install "${{ matrix.pyinstaller }}"
       - run: python -m unittest discover -s tests
       - name: Build exe
         run: |
           pyinstaller --onefile --windowed --name pnesmmw pnesmmw.py
           pyinstaller --onefile --console --name pnesmmw-cli pnesmmw.py
+      - name: Check exe architecture
+        shell: python
+        run: |
+          import struct
+          for exe in ("dist/pnesmmw.exe", "dist/pnesmmw-cli.exe"):
+              data = open(exe, "rb").read(4096)
+              pe, = struct.unpack_from("<I", data, 0x3c)
+              machine, = struct.unpack_from("<H", data, pe + 4)
+              print(exe, hex(machine))
+              assert machine == ${{ matrix.machine }}, "wrong architecture"
       - name: Package
         shell: pwsh
         run: |
-          New-Item -ItemType Directory pnesmmw-windows
-          Copy-Item dist/pnesmmw.exe, dist/pnesmmw-cli.exe, pnesmmw.mdb, README.md pnesmmw-windows/
+          New-Item -ItemType Directory ${{ matrix.name }}
+          Copy-Item dist/pnesmmw.exe, dist/pnesmmw-cli.exe, pnesmmw.mdb, README.md ${{ matrix.name }}/
           dist/pnesmmw-cli.exe --help
       - uses: actions/upload-artifact@v4
         with:
-          name: pnesmmw-windows
-          path: pnesmmw-windows/
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}/
 
   linux:
     needs: test
@@ -72,10 +99,12 @@ jobs:
       - name: Zip
         run: |
           (cd pnesmmw-windows && zip -r ../pnesmmw-windows.zip .)
+          (cd pnesmmw-windows-32bit && zip -r ../pnesmmw-windows-32bit.zip .)
           chmod +x pnesmmw-linux/pnesmmw.py
           tar czf pnesmmw-linux.tar.gz pnesmmw-linux
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             pnesmmw-windows.zip
+            pnesmmw-windows-32bit.zip
             pnesmmw-linux.tar.gz

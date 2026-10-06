@@ -6,7 +6,7 @@ The 2003 program was a closed-source Windows binary. This version is a rewrite i
 
 ## Getting it
 
-**Windows.** Download `pnesmmw-windows` from the latest run of the [Build workflow](../../actions/workflows/build.yml), or `pnesmmw-windows.zip` from Releases, and unzip it to a folder. `pnesmmw.exe` is the graphical program and `pnesmmw-cli.exe` is the command-line version. No Python install is needed. To build the exe yourself, install Python 3 from python.org and run `build_windows.bat`.
+**Windows.** Download a zip from [Releases](../../releases) and unzip it to a folder. `pnesmmw-windows.zip` is the 64-bit version for Windows 8.1 and newer. `pnesmmw-windows-32bit.zip` runs on 32-bit and 64-bit Windows from Windows 7 SP1 on, so pick it for older or 32-bit PCs (Windows 7 needs its updates installed). In both, `pnesmmw.exe` is the graphical program and `pnesmmw-cli.exe` is the command-line version. No Python install is needed. Windows may warn that the program is from an unknown publisher, because it isn't code-signed: click **More info**, then **Run anyway**. To build the exe yourself, install Python 3 from python.org and run `build_windows.bat`.
 
 **Linux.** You need Python 3.8 or newer with Tk (`sudo apt install python3-tk` on Debian/Ubuntu, `sudo dnf install python3-tkinter` on Fedora, `sudo pacman -S tk` on Arch). Then run `./pnesmmw.py` from the folder. Nothing else needs installing, because the program only uses the Python standard library. Without Tk the command-line mode still works. macOS works the same way.
 
