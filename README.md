@@ -64,7 +64,7 @@ Paths in the ini can be relative to the program folder, and an empty `rompath` m
 
 ## What changed from 1.2a
 
-The program now runs natively on Linux and macOS as well as Windows, and it adds a command-line mode. The supported mapper list is updated to current PocketNES (Dwedit's builds): 5, 10, 30, 40, 42, 64, 74, 77, 85, 88, 118, 119, 140, 158, 163, 178, 184, 187, 206, 218, 245, 249, 252 and 254 are added. The PocketNES v9 list is still in the ini as a comment.
+The program now runs natively on Linux and macOS as well as Windows, and it adds a command-line mode. The supported mapper list now matches the [GamingFanboy365 PocketNES fork](https://github.com/GamingFanboy365/pocketnes), which adds 5, 10, 28, 30, 38, 40, 41, 42, 64, 74, 77, 85, 88, 89, 113, 118, 119, 140, 146, 158, 163, 178, 184, 185, 187, 206, 225, 245, 249, 252 and 254 to the v9 list. The list only drives the `[inc]` warning, so menus still work with stock PocketNES builds, which use the same rom format and flags. The PocketNES v9 list is written to the ini as a comment.
 
 The flag value `16` in the database meant "follow sprite" for old PocketNES versions. Current PocketNES uses bit 16 for Dendy timing, so the database's legacy `16` is no longer passed through. Otherwise many games would wrongly start in Dendy mode. The Rom Info panel can still set the new 50 fps (8) and Dendy (16) flags by hand.
 
